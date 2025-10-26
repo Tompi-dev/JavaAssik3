@@ -1,0 +1,3 @@
+Dataset,Algorithm,Vertices,Edges,TotalCost,TimeMs,Comparisons
+CityNetwork,Prim,5,4,24,4,8
+CityNetwork,Kruskal,5,4,24,26,5

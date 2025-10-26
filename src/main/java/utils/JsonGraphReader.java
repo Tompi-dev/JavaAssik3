@@ -17,21 +17,37 @@ public class JsonGraphReader {
 
             for (JsonElement g : jsonGraphs) {
                 JsonObject obj = g.getAsJsonObject();
-                String name = obj.get("name").getAsString();
-                int vertices = obj.get("vertices").getAsInt();
+
+
+                String name = obj.get("id").getAsString();
+
+
+                JsonArray nodesArray = obj.getAsJsonArray("nodes");
+                int vertices = nodesArray.size();
+
+
+                Map<String, Integer> nameToIndex = new HashMap<>();
+                for (int i = 0; i < vertices; i++) {
+                    nameToIndex.put(nodesArray.get(i).getAsString(), i);
+                }
+
                 JsonArray edgesArray = obj.getAsJsonArray("edges");
 
                 List<Kruskal.Edge> kruskalEdges = new ArrayList<>();
                 List<List<Prim.Edge>> adjacency = new ArrayList<>();
                 for (int i = 0; i < vertices; i++) adjacency.add(new ArrayList<>());
 
+
                 for (JsonElement e : edgesArray) {
                     JsonObject edgeObj = e.getAsJsonObject();
-                    int src = edgeObj.get("src").getAsInt();
-                    int dest = edgeObj.get("dest").getAsInt();
+                    String from = edgeObj.get("from").getAsString();
+                    String to = edgeObj.get("to").getAsString();
                     int weight = edgeObj.get("weight").getAsInt();
 
+                    int src = nameToIndex.get(from);
+                    int dest = nameToIndex.get(to);
 
+                    // add edges to both algorithms
                     kruskalEdges.add(new Kruskal.Edge(src, dest, weight));
                     adjacency.get(src).add(new Prim.Edge(src, dest, weight));
                     adjacency.get(dest).add(new Prim.Edge(dest, src, weight));
@@ -39,12 +55,14 @@ public class JsonGraphReader {
 
                 graphs.add(new GraphData(name, vertices, kruskalEdges, adjacency));
             }
+
         } catch (IOException e) {
             System.err.println("Error reading JSON: " + e.getMessage());
         }
 
         return graphs;
     }
+
 
     public static class GraphData {
         public final String name;

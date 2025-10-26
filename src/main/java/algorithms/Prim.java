@@ -5,82 +5,60 @@ import java.util.*;
 
 public class Prim {
 
-
     public static class Edge {
         public int src, dest, weight;
-
         public Edge(int src, int dest, int weight) {
             this.src = src;
             this.dest = dest;
             this.weight = weight;
         }
-
-        @Override
-        public String toString() {
-            return String.format("(%d -- %d, w=%d)", src, dest, weight);
-        }
     }
 
-
-    public static class MSTResult {
-        public List<Edge> mstEdges;
+    public static class Result {
         public int totalCost;
-        public PerformanceTracker tracker;
+        public long timeMs;
+        public long comparisons;
+        public long arrayAccesses;
 
-        public MSTResult(List<Edge> mstEdges, int totalCost, PerformanceTracker tracker) {
-            this.mstEdges = mstEdges;
+        public Result(int totalCost, long timeMs, long comparisons, long arrayAccesses) {
             this.totalCost = totalCost;
-            this.tracker = tracker;
-        }
-
-        public void printSummary() {
-            System.out.println("Prim MST Edges:");
-            mstEdges.forEach(System.out::println);
-            System.out.println("Total MST Cost: " + totalCost);
-            System.out.println(tracker.report());
+            this.timeMs = timeMs;
+            this.comparisons = comparisons;
+            this.arrayAccesses = arrayAccesses;
         }
     }
 
-    public static MSTResult runPrim(int vertices, List<List<Edge>> adj, PerformanceTracker tracker) {
-        boolean[] visited = new boolean[vertices];
-        PriorityQueue<Edge> pq = new PriorityQueue<>(Comparator.comparingInt(e -> e.weight));
-        List<Edge> mst = new ArrayList<>();
+    public static Result runPrim(List<List<Edge>> graph, int vertices, PerformanceTracker tracker) {
+        long start = System.currentTimeMillis();
+
+        boolean[] inMST = new boolean[vertices];
+        int[] key = new int[vertices];
+        Arrays.fill(key, Integer.MAX_VALUE);
+        key[0] = 0;
+
+        PriorityQueue<int[]> pq = new PriorityQueue<>(Comparator.comparingInt(a -> a[1]));
+        pq.offer(new int[]{0, 0});
         int totalCost = 0;
 
+        while (!pq.isEmpty()) {
+            int[] curr = pq.poll();
+            int u = curr[0];
+            if (inMST[u]) continue;
 
-        visited[0] = true;
-        tracker.incArrayAccesses(1);
+            inMST[u] = true;
+            totalCost += curr[1];
 
-
-        for (Edge e : adj.get(0)) {
-            pq.offer(e);
-            tracker.incArrayAccesses(1);
-        }
-
-        while (!pq.isEmpty() && mst.size() < vertices - 1) {
-            Edge e = pq.poll();
-            tracker.incArrayAccesses(1);
-            int v = e.dest;
-
-            tracker.incComparisons();
-            if (visited[v]) continue;
-
-
-            visited[v] = true;
-            tracker.incArrayAccesses(1);
-            mst.add(e);
-            totalCost += e.weight;
-
-
-            for (Edge next : adj.get(v)) {
+            for (Edge e : graph.get(u)) {
                 tracker.incComparisons();
-                if (!visited[next.dest]) {
-                    pq.offer(next);
-                    tracker.incArrayAccesses(1);
+                if (!inMST[e.dest] && e.weight < key[e.dest]) {
+                    key[e.dest] = e.weight;
+                    pq.offer(new int[]{e.dest, e.weight});
+                    tracker.incArrayAccesses(2);
                 }
             }
         }
 
-        return new MSTResult(mst, totalCost, tracker);
+        long end = System.currentTimeMillis();
+        return new Result(totalCost, end - start, tracker.getComparisons(), tracker.getArrayAccesses());
     }
 }
